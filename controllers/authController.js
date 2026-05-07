@@ -221,3 +221,25 @@ exports.changePassword = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// @desc    Update push token
+// @route   PUT /api/auth/push-token
+// @access  Private
+exports.updatePushToken = async (req, res) => {
+  const { pushToken } = req.body;
+
+  try {
+    const user = await User.findById(req.user.id);
+
+    if (user) {
+      user.settings.pushToken = pushToken;
+      await user.save();
+      res.json({ success: true, message: 'Push token updated' });
+    } else {
+      res.status(404).json({ success: false, message: 'User not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+

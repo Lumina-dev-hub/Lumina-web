@@ -9,6 +9,7 @@ const {
   completeOnboarding,
   uploadPhoto,
   changePassword,
+  updatePushToken,
 } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
 const upload = require('../config/cloudinary');
@@ -21,5 +22,6 @@ router.put('/profile', protect, updateProfile);
 router.put('/onboarding', protect, completeOnboarding);
 router.post('/upload-photo', protect, upload.single('image'), uploadPhoto);
 router.put('/change-password', protect, changePassword);
+router.put('/push-token', protect, updatePushToken);
 
 module.exports = router;
