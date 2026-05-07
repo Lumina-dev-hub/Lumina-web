@@ -10,6 +10,7 @@ const {
   uploadPhoto,
   changePassword,
   updatePushToken,
+  testNotification,
 } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
 const upload = require('../config/cloudinary');
@@ -23,5 +24,7 @@ router.put('/onboarding', protect, completeOnboarding);
 router.post('/upload-photo', protect, upload.single('image'), uploadPhoto);
 router.put('/change-password', protect, changePassword);
 router.put('/push-token', protect, updatePushToken);
+router.post('/test-notification', protect, testNotification);
+
 
 module.exports = router;

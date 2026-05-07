@@ -243,3 +243,31 @@ exports.updatePushToken = async (req, res) => {
   }
 };
 
+// @desc    Test push notification
+// @route   POST /api/auth/test-notification
+// @access  Private
+exports.testNotification = async (req, res) => {
+  const { sendPushNotification } = require('../services/notificationService');
+
+  try {
+    const user = await User.findById(req.user.id);
+    const token = user.settings.pushToken;
+
+    if (!token) {
+      return res.status(400).json({ success: false, message: 'No push token found for this user' });
+    }
+
+    await sendPushNotification(
+      token,
+      '🧪 Test Notification',
+      'This is a manual test notification from Lumina AI!',
+      { type: 'test' }
+    );
+
+    res.json({ success: true, message: 'Test notification sent' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+

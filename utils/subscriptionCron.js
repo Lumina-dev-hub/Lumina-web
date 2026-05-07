@@ -65,7 +65,7 @@ const initSubscriptionCron = () => {
     } catch (error) {
       console.error('[Cron] Subscription expiry error:', error);
     }
-  }, { scheduled: true, timezone: 'UTC' });
+  }, { scheduled: true, timezone: 'Africa/Lagos' });
 
 
   // ─────────────────────────────────────────────
@@ -109,7 +109,7 @@ const initSubscriptionCron = () => {
     } catch (error) {
       console.error('[Cron] Subscription reminder error:', error);
     }
-  }, { scheduled: true, timezone: 'UTC' });
+  }, { scheduled: true, timezone: 'Africa/Lagos' });
 
 
   // ─────────────────────────────────────────────
@@ -118,7 +118,8 @@ const initSubscriptionCron = () => {
   // ─────────────────────────────────────────────
   cron.schedule('* * * * *', async () => {
     try {
-      const now = new Date();
+      // Get current time in Nigerian timezone (Africa/Lagos)
+      const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Africa/Lagos' }));
       const todayCode = getTodayDayCode();
 
       // Fetch all classrooms that have a period today
@@ -161,7 +162,7 @@ const initSubscriptionCron = () => {
     } catch (error) {
       console.error('[Cron] Class reminder error:', error);
     }
-  });
+  }, { scheduled: true, timezone: 'Africa/Lagos' });
 
 };
 
