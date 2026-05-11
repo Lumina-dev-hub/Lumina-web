@@ -1,28 +1,53 @@
 const mongoose = require('mongoose');
 
-const stepSchema = new mongoose.Schema({
-  number: Number,
+// ─── NEW: Presentation step (replaces old stepSchema) ───────────────────────
+const presentationSchema = new mongoose.Schema({
+  step: Number,
   title: String,
-  description: String
-});
+  teacherActivity: String,
+  studentActivity: String,
+  content: String,
+  // Backward-compat: old field was "description"
+  description: String,
+}, { _id: false });
 
+// ─── Assessment ───────────────────────────────────────────────────────────────
 const assessmentSchema = new mongoose.Schema({
   type: String,
-  tasks: [String]
-});
+  questions: [String], // NEW field
+  tasks: [String],     // KEPT for backward compat with old documents
+}, { _id: false });
 
+// ─── Evaluation object ────────────────────────────────────────────────────────
+const evaluationSchema = new mongoose.Schema({
+  method: String,
+  criteria: [String],
+}, { _id: false });
+
+// ─── Lesson Note: mainContent ─────────────────────────────────────────────────
+const mainContentSchema = new mongoose.Schema({
+  heading: String,
+  content: String,
+  examples: [String],
+  // Backward-compat: old field was "desc"
+  desc: String,
+  image: String,
+}, { _id: false });
+
+// ─── OLD schemas kept for backward compat (existing docs) ────────────────────
 const definitionSchema = new mongoose.Schema({
   term: String,
   def: String,
-  icon: String
-});
+  icon: String,
+}, { _id: false });
 
 const processSchema = new mongoose.Schema({
   title: String,
   desc: String,
-  image: String
-});
+  image: String,
+}, { _id: false });
 
+// ─── Main Schema ─────────────────────────────────────────────────────────────
 const LessonPlanSchema = new mongoose.Schema(
   {
     teacher: {
@@ -55,12 +80,12 @@ const LessonPlanSchema = new mongoose.Schema(
     term: String,
     session: String,
     duration: String,
-    
+
     // Settings
     philosophy: String,
     planStyle: String,
     studentType: String,
-    
+
     // Tracking
     generationCount: {
       type: Number,
@@ -70,24 +95,42 @@ const LessonPlanSchema = new mongoose.Schema(
       type: Number,
       default: 0
     },
-    
-    // Content
-    objectives: [String],
+
+    // ─── NEW Content Fields ────────────────────────────────────────────
+    behavioralObjectives: [String],       // replaces: objectives
+    instructionalMaterials: [String],     // new
+    previousKnowledge: String,            // new
+    classActivity: String,                // new
     introduction: String,
-    steps: [stepSchema],
-    evaluation: String,
+    presentation: [presentationSchema],   // replaces: steps
+    evaluation: evaluationSchema,         // changed from String to object
+    assignment: String,                   // new
     assessment: assessmentSchema,
-    
-    // Lesson Note
+
+    // ─── DEPRECATED (kept for backward compat — old documents) ────────
+    objectives: [String],
+    steps: [{ type: mongoose.Schema.Types.Mixed }],
+
+    // ─── Lesson Note ─────────────────────────────────────────────────
     lessonNote: {
+      topic: String,
       summary: String,
+      introduction: String,             // new (replaces overview)
+      mainContent: [mainContentSchema], // new (replaces process)
+      keyPoints: [String],              // new
+      conclusion: String,               // new
+      evaluation: evaluationSchema,     // new (object)
+      assignment: String,               // new
+
+      // DEPRECATED (backward compat)
       overview: String,
       definitions: [definitionSchema],
-      process: [processSchema]
+      process: [processSchema],
     }
   },
   {
-    timestamps: true
+    timestamps: true,
+    strict: false // Allow extra fields from old documents to pass through
   }
 );
 
