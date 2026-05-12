@@ -154,10 +154,6 @@ const initSubscriptionCron = () => {
         );
         const todayCode = getTodayDayCode(now);
 
-        console.log(
-          `[Cron] Checking reminders at ${now.toISOString()} (Lagos). Day: ${todayCode}`,
-        );
-
         // Fetch all classrooms that have a period today
         const classrooms = await Classroom.find({
           "schedule.day": todayCode,
@@ -166,69 +162,53 @@ const initSubscriptionCron = () => {
           select: "settings.pushToken",
         });
 
-        if (classrooms.length > 0) {
-          console.log(
-            `[Cron] Found ${classrooms.length} classrooms with periods today.`,
-          );
-        }
-
         for (const classroom of classrooms) {
           const teacher = classroom.teacher;
           
-          if (!teacher) {
-            console.log(`[Cron] No teacher found for classroom: ${classroom.name} (${classroom._id})`);
-            continue;
-          }
-
-          if (!teacher.settings?.pushToken) {
-            console.log(`[Cron] Teacher ${teacher._id} has no push token for classroom: ${classroom.name}`);
-            continue;
-          }
+          if (!teacher || !teacher.settings?.pushToken) continue;
 
           const token = teacher.settings.pushToken;
           const todayPeriods = classroom.schedule.filter(
             (p) => p.day === todayCode,
           );
 
-          console.log(`[Cron] Classroom ${classroom.name} has ${todayPeriods.length} periods today.`);
 
           for (const period of todayPeriods) {
             const classStart = parseTime(period.startTime, now);
             const diffMs = classStart - now;
             const diffMins = Math.round(diffMs / 60000);
 
-            console.log(`[Cron] DEBUG: ${period.subject} | Start: ${period.startTime} | diffMins: ${diffMins}`);
-
-            if (diffMins === 15) {
-              console.log(
-                `[Cron] TRIGGER: 15m reminder for ${period.subject} to ${teacher._id}`,
-              );
-              await sendPushNotification(
-                token,
-                "🔔 Class in 15 Minutes",
-                `${period.subject} (${classroom.name}) starts at ${period.startTime}. Get ready!`,
-                {
-                  type: "class_reminder",
-                  classroomId: classroom._id,
-                  minutesBefore: 15,
-                },
-              );
-            } else if (diffMins === 5) {
+            if (diffMins === 5) {
               console.log(
                 `[Cron] TRIGGER: 5m reminder for ${period.subject} to ${teacher._id}`,
               );
               await sendPushNotification(
                 token,
-                "⚡ Class Starting Soon!",
-                `${period.subject} (${classroom.name}) starts in 5 minutes. Head to class!`,
+                "🔔 Class in 5 Minutes",
+                `${period.subject} (${classroom.name}) starts at ${period.startTime}. Get ready!`,
                 {
                   type: "class_reminder",
                   classroomId: classroom._id,
                   minutesBefore: 5,
                 },
               );
+            } else if (diffMins === 0) {
+              console.log(
+                `[Cron] TRIGGER: Start reminder for ${period.subject} to ${teacher._id}`,
+              );
+              await sendPushNotification(
+                token,
+                "🚀 Class Started!",
+                `${period.subject} (${classroom.name}) has started. Head to class now!`,
+                {
+                  type: "class_reminder",
+                  classroomId: classroom._id,
+                  minutesBefore: 0,
+                },
+              );
             }
           }
+
         }
 
       } catch (error) {
