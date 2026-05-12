@@ -6,7 +6,21 @@ const { sendPushNotification } = require("../services/notificationService");
 
 // Helper: parse "HH:MM" string into today's Date object
 const parseTime = (timeStr, referenceDate) => {
-  const [hours, minutes] = timeStr.split(":").map(Number);
+  // Handles formats like "08:00 AM", "8:00 PM", or "13:00"
+  const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+  if (!match) return new Date(NaN);
+
+  let hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  const modifier = match[3] ? match[3].toUpperCase() : null;
+
+  if (modifier === 'PM' && hours < 12) {
+    hours += 12;
+  }
+  if (modifier === 'AM' && hours === 12) {
+    hours = 0;
+  }
+
   const d = new Date(referenceDate);
   d.setHours(hours, minutes, 0, 0);
   return d;
