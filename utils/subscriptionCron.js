@@ -160,24 +160,30 @@ const initSubscriptionCron = () => {
 
         for (const classroom of classrooms) {
           const teacher = classroom.teacher;
-          if (!teacher || !teacher.settings?.pushToken) continue;
+          
+          if (!teacher) {
+            console.log(`[Cron] No teacher found for classroom: ${classroom.name} (${classroom._id})`);
+            continue;
+          }
+
+          if (!teacher.settings?.pushToken) {
+            console.log(`[Cron] Teacher ${teacher._id} has no push token for classroom: ${classroom.name}`);
+            continue;
+          }
 
           const token = teacher.settings.pushToken;
           const todayPeriods = classroom.schedule.filter(
             (p) => p.day === todayCode,
           );
 
+          console.log(`[Cron] Classroom ${classroom.name} has ${todayPeriods.length} periods today.`);
+
           for (const period of todayPeriods) {
             const classStart = parseTime(period.startTime, now);
             const diffMs = classStart - now;
             const diffMins = Math.round(diffMs / 60000);
 
-            // Only log if class is within the next hour to avoid log spam
-            if (diffMins > 0 && diffMins <= 60) {
-              console.log(
-                `[Cron] Upcoming: ${period.subject} in ${diffMins}m (Start: ${period.startTime}, Now: ${now.getHours()}:${now.getMinutes()})`,
-              );
-            }
+            console.log(`[Cron] DEBUG: ${period.subject} | Start: ${period.startTime} | diffMins: ${diffMins}`);
 
             if (diffMins === 15) {
               console.log(
@@ -210,6 +216,7 @@ const initSubscriptionCron = () => {
             }
           }
         }
+
       } catch (error) {
         console.error("[Cron] Class reminder error:", error);
       }
