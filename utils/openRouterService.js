@@ -96,13 +96,13 @@ const MODELS = {
   LESSON_PLAN: "deepseek/deepseek-v4-flash",
 
   // GPT / Claude - Excellent for natural, student-friendly writing and formatting
-  LESSON_NOTE: "~anthropic/claude-haiku-latest",
+  LESSON_NOTE: "anthropic/claude-3-haiku",
 
   // Mid-level model - Strong logical reasoning for generating rigorous, varied questions
-  ASSESSMENT: "google/gemma-4-31b-it",
+  ASSESSMENT: "google/gemma-2-9b-it",
 
   // Cheap fast model - Perfect for quick refinements and maintaining JSON structure
-  REGENERATION: "~openai/gpt-mini-latest",
+  REGENERATION: "openai/gpt-4o",
 };
 exports.generateLessonPlanWithAI = async (params, preferences, lang) => {
   const prompt = `

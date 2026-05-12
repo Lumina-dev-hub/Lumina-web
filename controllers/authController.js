@@ -1,17 +1,26 @@
 const User = require('../models/User');
+const DeviceLog = require('../models/DeviceLog');
 const generateToken = require('../utils/generateToken');
 
 // @desc    Register user
 // @route   POST /api/auth/register
 // @access  Public
 exports.register = async (req, res) => {
-  const { fullName, email, password } = req.body;
+  const { fullName, email, password, deviceId } = req.body;
 
   try {
     const userExists = await User.findOne({ email });
 
     if (userExists) {
       return res.status(400).json({ success: false, message: 'User already exists' });
+    }
+
+    let hasUsedTrial = false;
+    if (deviceId) {
+      const deviceExists = await DeviceLog.findOne({ deviceId });
+      if (deviceExists) {
+        hasUsedTrial = true; // Device already used for a free trial
+      }
     }
 
     // Generate simulated OTP (Fixed to 123456 for testing)
@@ -24,7 +33,14 @@ exports.register = async (req, res) => {
       password,
       otp,
       otpExpires,
+      settings: {
+        hasUsedTrial,
+      }
     });
+
+    if (deviceId) {
+      await DeviceLog.create({ deviceId, userId: user._id });
+    }
 
     if (user) {
       res.status(201).json({

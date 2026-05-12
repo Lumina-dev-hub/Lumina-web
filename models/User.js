@@ -92,6 +92,10 @@ const UserSchema = new mongoose.Schema(
         type: String,
         default: null,
       },
+      hasUsedTrial: {
+        type: Boolean,
+        default: false,
+      },
     },
   },
   {
