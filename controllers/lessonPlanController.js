@@ -2,6 +2,8 @@ const LessonPlan = require("../models/LessonPlan");
 const Syllabus = require("../models/Syllabus");
 const Classroom = require("../models/Classroom");
 const aiService = require("../utils/openRouterService");
+const subscriptionService = require("../services/subscriptionService");
+const referralService = require("../services/referralService");
 
 // @desc    Generate a lesson plan using AI
 // @route   POST /api/plans/generate
@@ -18,6 +20,16 @@ exports.generateLessonPlan = async (req, res) => {
       isEmpty,
       includeAssessment,
     } = req.body;
+
+    // Check subscription limits
+    const limitCheck = subscriptionService.checkLimits(req.user);
+    if (!limitCheck.canGenerate) {
+      return res.status(403).json({
+        success: false,
+        message: limitCheck.message,
+        limitReached: true,
+      });
+    }
 
     // Fetch classroom to get current term and session
     const classroom = await Classroom.findById(classroomId);
@@ -129,6 +141,9 @@ exports.generateLessonPlan = async (req, res) => {
 
     const lessonPlan = await LessonPlan.create(planData);
 
+    // Track referral first generation step
+    await referralService.trackStep(req.user.id, 'firstGeneration');
+
     // Update syllabus if exists
     const syllabus = await Syllabus.findOne({
       classroom: classroomId,
@@ -173,14 +188,11 @@ exports.regeneratePlan = async (req, res) => {
     }
 
     // Check subscription limits for Pro plan
-    if (
-      req.user.settings.subscriptionPlan === "Pro" &&
-      plan.generationCount >= 5
-    ) {
+    const limitCheck = subscriptionService.checkLimits(req.user, plan, true);
+    if (!limitCheck.canGenerate) {
       return res.status(403).json({
         success: false,
-        message:
-          "Regeneration limit reached for this plan. Please upgrade to Ultimate for unlimited regenerations.",
+        message: limitCheck.message,
         limitReached: true,
       });
     }
@@ -270,14 +282,11 @@ exports.regenerateLessonNote = async (req, res) => {
     }
 
     // Check subscription limits for Pro plan
-    if (
-      req.user.settings.subscriptionPlan === "Pro" &&
-      plan.noteGenerationCount >= 5
-    ) {
+    const limitCheck = subscriptionService.checkLimits(req.user, { generationCount: plan.noteGenerationCount }, true);
+    if (!limitCheck.canGenerate) {
       return res.status(403).json({
         success: false,
-        message:
-          "Regeneration limit reached for this note. Please upgrade to Ultimate for unlimited regenerations.",
+        message: limitCheck.message,
         limitReached: true,
       });
     }

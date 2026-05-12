@@ -96,6 +96,25 @@ const UserSchema = new mongoose.Schema(
         type: Boolean,
         default: false,
       },
+      referralCode: {
+        type: String,
+        unique: true,
+        sparse: true,
+      },
+      referredBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null,
+      },
+      referralStats: {
+        totalInvited: { type: Number, default: 0 },
+        successfulReferrals: { type: Number, default: 0 },
+        daysEarned: { type: Number, default: 0 },
+      },
+      unlockedRewards: {
+        type: [String], // e.g., ["tier_3", "tier_5"]
+        default: [],
+      },
     },
   },
   {

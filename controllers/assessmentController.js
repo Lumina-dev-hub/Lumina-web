@@ -3,6 +3,8 @@ const LessonPlan = require('../models/LessonPlan');
 const Syllabus = require('../models/Syllabus');
 const Classroom = require('../models/Classroom');
 const aiService = require('../utils/openRouterService');
+const subscriptionService = require('../services/subscriptionService');
+const referralService = require('../services/referralService');
 
 // @desc    Generate an assessment using Gemini AI
 // @route   POST /api/assessments/generate
@@ -19,6 +21,16 @@ exports.generateAssessment = async (req, res) => {
       topics,
       intensity // For exams
     } = req.body;
+
+    // Check subscription limits
+    const limitCheck = subscriptionService.checkLimits(req.user);
+    if (!limitCheck.canGenerate) {
+      return res.status(403).json({
+        success: false,
+        message: limitCheck.message,
+        limitReached: true,
+      });
+    }
     
     // Fetch classroom to get current session
     const classroom = await Classroom.findById(classroomId);
@@ -61,6 +73,10 @@ exports.generateAssessment = async (req, res) => {
     };
 
     const assessment = await Assessment.create(assessmentData);
+
+    // Track referral first generation step
+    await referralService.trackStep(req.user.id, 'firstGeneration');
+
     res.status(201).json({ success: true, data: assessment });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -77,10 +93,11 @@ exports.regenerateAssessment = async (req, res) => {
     }
 
     // Check subscription limits for Pro plan
-    if (req.user.settings.subscriptionPlan === 'Pro' && assessment.generationCount >= 5) {
+    const limitCheck = subscriptionService.checkLimits(req.user, assessment, true);
+    if (!limitCheck.canGenerate) {
       return res.status(403).json({ 
         success: false, 
-        message: 'Regeneration limit reached for this assessment. Please upgrade to Ultimate for unlimited regenerations.',
+        message: limitCheck.message,
         limitReached: true
       });
     }

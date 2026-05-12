@@ -1,6 +1,9 @@
 const User = require('../models/User');
+const Referral = require('../models/Referral');
 const DeviceLog = require('../models/DeviceLog');
 const generateToken = require('../utils/generateToken');
+const referralService = require('../services/referralService');
+const subscriptionService = require('../services/subscriptionService');
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -42,12 +45,32 @@ exports.register = async (req, res) => {
       await DeviceLog.create({ deviceId, userId: user._id });
     }
 
+    // Handle Referral logic
+    if (req.body.referralCode) {
+      const referrer = await User.findOne({ 'settings.referralCode': req.body.referralCode });
+      if (referrer && referrer._id.toString() !== user._id.toString()) {
+        user.settings.referredBy = referrer._id;
+        await user.save();
+
+        await Referral.create({
+          referrer: referrer._id,
+          referredUser: user._id,
+        });
+
+        // Update Referrer total invited count
+        referrer.settings.referralStats.totalInvited += 1;
+        await referrer.save();
+      }
+    }
+
+    // Generate referral code for the new user
+    await referralService.generateReferralCode(user);
+
     if (user) {
       res.status(201).json({
         success: true,
         message: 'OTP sent to email (simulated)',
         email: user.email,
-        // In a real app, don't return the OTP in the response
         debug_otp: otp 
       });
     }
@@ -76,6 +99,13 @@ exports.verifyOTP = async (req, res) => {
     user.isVerified = true;
     user.otp = undefined;
     user.otpExpires = undefined;
+
+    // Grant 5-day trial if eligible
+    await subscriptionService.grantTrial(user);
+
+    // Track referral verification step
+    await referralService.trackStep(user._id, 'verification');
+
     await user.save();
 
     res.status(200).json({
@@ -86,7 +116,8 @@ exports.verifyOTP = async (req, res) => {
         fullName: user.fullName,
         email: user.email,
         isVerified: user.isVerified,
-        isOnboarded: user.isOnboarded
+        isOnboarded: user.isOnboarded,
+        settings: user.settings
       }
     });
   } catch (error) {
@@ -182,6 +213,7 @@ exports.completeOnboarding = async (req, res) => {
       if (req.body.classroom) user.classroom = { ...user.classroom, ...req.body.classroom };
 
       const updatedUser = await user.save();
+      await referralService.trackStep(user._id, 'onboarding');
       res.json({ success: true, user: updatedUser });
     } else {
       res.status(404).json({ success: false, message: 'User not found' });

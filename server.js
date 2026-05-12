@@ -38,6 +38,7 @@ app.use('/api/syllabus', require('./routes/syllabusRoutes'));
 app.use('/api/plans', require('./routes/lessonPlanRoutes'));
 app.use('/api/assessments', require('./routes/assessmentRoutes'));
 app.use('/api/payments', require('./routes/paymentRoutes'));
+app.use('/api/referrals', require('./routes/referralRoutes'));
 
 // Error Handler
 app.use((err, req, res, next) => {
