@@ -61,6 +61,7 @@ const executePrompt = async (model, prompt) => {
           },
         ],
         response_format: { type: "json_object" },
+        max_tokens: 4000,
       },
       {
         headers: {
@@ -92,16 +93,16 @@ const executePrompt = async (model, prompt) => {
 // AI Models Configuration
 const MODELS = {
   // DeepSeek / Gemini Flash - Excellent for structured, long-form content generation
-  LESSON_PLAN: "deepseek/deepseek-v4-flash", 
-  
+  LESSON_PLAN: "deepseek/deepseek-v4-flash",
+
   // GPT / Claude - Excellent for natural, student-friendly writing and formatting
   LESSON_NOTE: "~anthropic/claude-haiku-latest",
-  
+
   // Mid-level model - Strong logical reasoning for generating rigorous, varied questions
-  ASSESSMENT: "google/gemma-4-31b-it", 
-  
+  ASSESSMENT: "google/gemma-4-31b-it",
+
   // Cheap fast model - Perfect for quick refinements and maintaining JSON structure
-  REGENERATION: "~openai/gpt-mini-latest"
+  REGENERATION: "~openai/gpt-mini-latest",
 };
 exports.generateLessonPlanWithAI = async (params, preferences, lang) => {
   const prompt = `
