@@ -123,6 +123,8 @@ const initSubscriptionCron = () => {
       // Get current time in Nigerian timezone (Africa/Lagos)
       const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Africa/Lagos' }));
       const todayCode = getTodayDayCode(now);
+      
+      // console.log(`[Cron] Checking reminders at ${now.toISOString()} (Lagos). Day: ${todayCode}`);
 
       // Fetch all classrooms that have a period today
       const classrooms = await Classroom.find({
@@ -131,6 +133,10 @@ const initSubscriptionCron = () => {
         path: 'teacher',
         select: 'settings.pushToken',
       });
+
+      if (classrooms.length > 0) {
+        // console.log(`[Cron] Found ${classrooms.length} classrooms with periods today.`);
+      }
 
       for (const classroom of classrooms) {
         const teacher = classroom.teacher;
@@ -144,8 +150,13 @@ const initSubscriptionCron = () => {
           const diffMs = classStart - now;
           const diffMins = Math.round(diffMs / 60000);
 
+          // Only log if class is within the next hour to avoid log spam
+          if (diffMins > 0 && diffMins <= 60) {
+             console.log(`[Cron] Upcoming: ${period.subject} in ${diffMins}m (Start: ${period.startTime}, Now: ${now.getHours()}:${now.getMinutes()})`);
+          }
+
           if (diffMins === 15) {
-            console.log(`[Cron] Sending 15m reminder for ${period.subject} to ${teacher._id}`);
+            console.log(`[Cron] TRIGGER: 15m reminder for ${period.subject} to ${teacher._id}`);
             await sendPushNotification(
               token,
               '🔔 Class in 15 Minutes',
@@ -153,7 +164,7 @@ const initSubscriptionCron = () => {
               { type: 'class_reminder', classroomId: classroom._id, minutesBefore: 15 }
             );
           } else if (diffMins === 5) {
-            console.log(`[Cron] Sending 5m reminder for ${period.subject} to ${teacher._id}`);
+            console.log(`[Cron] TRIGGER: 5m reminder for ${period.subject} to ${teacher._id}`);
             await sendPushNotification(
               token,
               '⚡ Class Starting Soon!',
@@ -167,6 +178,7 @@ const initSubscriptionCron = () => {
       console.error('[Cron] Class reminder error:', error);
     }
   }, { scheduled: true, timezone: 'Africa/Lagos' });
+
 
 
   // ─────────────────────────────────────────────

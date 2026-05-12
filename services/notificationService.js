@@ -30,18 +30,16 @@ const sendPushNotification = async (pushToken, title, body, data = {}) => {
   let chunks = expo.chunkPushNotifications(messages);
   let tickets = [];
 
-  (async () => {
-    // Send the chunks to the Expo push notification service.
-    for (let chunk of chunks) {
-      try {
-        let ticketChunk = await expo.sendPushNotificationsAsync(chunk);
-        console.log('Push ticket:', ticketChunk);
-        tickets.push(...ticketChunk);
-      } catch (error) {
-        console.error('Error sending push chunk:', error);
-      }
+  // Send the chunks to the Expo push notification service.
+  for (let chunk of chunks) {
+    try {
+      let ticketChunk = await expo.sendPushNotificationsAsync(chunk);
+      console.log('Push ticket:', ticketChunk);
+      tickets.push(...ticketChunk);
+    } catch (error) {
+      console.error('Error sending push chunk:', error);
     }
-  })();
+  }
 
   // Note: For a production app, you should check the receipts later 
   // to handle expired tokens or errors.
