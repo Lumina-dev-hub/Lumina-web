@@ -89,9 +89,20 @@ const executePrompt = async (model, prompt) => {
   }
 };
 
-// Default models
-const DEFAULT_MODEL = "openai/gpt-4o-mini"; // Extremely reliable for JSON
-const PRO_MODEL = "google/gemini-2.0-pro-exp-02-05:free"; // High quality
+// AI Models Configuration
+const MODELS = {
+  // DeepSeek / Gemini Flash - Excellent for structured, long-form content generation
+  LESSON_PLAN: "deepseek/deepseek-chat", 
+  
+  // GPT / Claude - Excellent for natural, student-friendly writing and formatting
+  LESSON_NOTE: "anthropic/claude-3.5-haiku-20241022",
+  
+  // Mid-level model - Strong logical reasoning for generating rigorous, varied questions
+  ASSESSMENT: "meta-llama/llama-3.3-70b-instruct", 
+  
+  // Cheap fast model - Perfect for quick refinements and maintaining JSON structure
+  REGENERATION: "openai/gpt-4o-mini"
+};
 exports.generateLessonPlanWithAI = async (params, preferences, lang) => {
   const prompt = `
 You are a highly experienced school teacher and curriculum planner with deep knowledge of classroom teaching methodologies and lesson planning.
@@ -171,7 +182,7 @@ JSON STRUCTURE:
 Ensure all fields are educational, realistic, and detailed enough for actual classroom teaching.
 `;
 
-  return executePrompt(DEFAULT_MODEL, prompt);
+  return executePrompt(MODELS.LESSON_PLAN, prompt);
 };
 
 exports.regenerateLessonPlanWithAI = async (existingPlan, lang) => {
@@ -197,7 +208,7 @@ ${JSON.stringify(existingPlan)}
 Return the improved version with the exact same structure and keys.
 `;
 
-  return executePrompt(DEFAULT_MODEL, prompt);
+  return executePrompt(MODELS.REGENERATION, prompt);
 };
 
 exports.generateLessonNoteWithAI = async (plan, lang) => {
@@ -258,7 +269,7 @@ JSON STRUCTURE:
 Ensure the note is realistic, educational, classroom-ready, and properly detailed.
 `;
 
-  return executePrompt(DEFAULT_MODEL, prompt);
+  return executePrompt(MODELS.LESSON_NOTE, prompt);
 };
 
 exports.generateAssessmentWithAI = async (params, preferences, lang) => {
@@ -333,7 +344,7 @@ Respond ONLY with a valid JSON object matching this structure:
 }
 `;
 
-  return executePrompt(DEFAULT_MODEL, prompt);
+  return executePrompt(MODELS.ASSESSMENT, prompt);
 };
 
 exports.regenerateAssessmentWithAI = async (existingAssessment, lang) => {
@@ -348,7 +359,7 @@ ${JSON.stringify(existingAssessment)}
 Respond ONLY with a valid JSON object containing the "title" and "sections" matching the exact structure as the input above. DO NOT include the existing database fields like _id, createdAt, teacher, classroom, etc.
 `;
 
-  return executePrompt(DEFAULT_MODEL, prompt);
+  return executePrompt(MODELS.REGENERATION, prompt);
 };
 
 exports.regenerateLessonNoteWithAI = async (existingNote, lang) => {
@@ -365,5 +376,5 @@ ${JSON.stringify(existingNote)}
 Respond ONLY with a valid JSON object matching the exact structure as the input above (summary, overview, definitions, process). DO NOT include the existing database fields like _id, createdAt, teacher, classroom, etc.
 `;
 
-  return executePrompt(DEFAULT_MODEL, prompt);
+  return executePrompt(MODELS.REGENERATION, prompt);
 };
