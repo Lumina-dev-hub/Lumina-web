@@ -22,7 +22,8 @@ exports.grantTrial = async (user) => {
   const expiresAt = new Date(now);
   expiresAt.setDate(expiresAt.getDate() + TRIAL_DAYS);
 
-  user.settings.subscriptionPlan = "Pro";
+  // Keep plan as "Free" but set expiry for trial access
+  user.settings.subscriptionPlan = "Free";
   user.settings.subscriptionStartedAt = now;
   user.settings.subscriptionExpiresAt = expiresAt;
   user.settings.hasUsedTrial = true;
@@ -52,14 +53,16 @@ exports.addSubscriptionDays = async (userId, days, planType = "Pro") => {
 
   currentExpiry.setDate(currentExpiry.getDate() + days);
 
-  user.settings.subscriptionPlan = planType;
   user.settings.subscriptionExpiresAt = currentExpiry;
   
-  // If moving to Ultimate, set it, otherwise keep Pro or upgrade Free -> Pro
+  // If moving to Ultimate, set it, otherwise upgrade to Pro
   if (planType === "Ultimate") {
     user.settings.subscriptionPlan = "Ultimate";
-  } else if (user.settings.subscriptionPlan !== "Ultimate") {
-    user.settings.subscriptionPlan = "Pro";
+  } else {
+    // If they were Free/Trial, upgrade to Pro
+    if (user.settings.subscriptionPlan !== "Ultimate") {
+      user.settings.subscriptionPlan = "Pro";
+    }
   }
 
   return await user.save();
@@ -83,7 +86,7 @@ exports.checkLimits = (user, document = null, isRegen = false) => {
     }
   }
 
-  // 2. Check if Pro (Trial or Paid)
+  // 2. Check if Pro
   if (subscriptionPlan === "Pro") {
     if (subscriptionExpiresAt && subscriptionExpiresAt > now) {
       // Check regeneration limits for Pro
@@ -101,10 +104,28 @@ exports.checkLimits = (user, document = null, isRegen = false) => {
     }
   }
 
-  // 3. Fallback for Free/Expired users
+  // 3. Check if Free with active Trial
+  if (subscriptionPlan === "Free") {
+    if (subscriptionExpiresAt && subscriptionExpiresAt > now) {
+      // Trial users get Pro features for 5 days
+      if (isRegen && document) {
+        const count = document.generationCount || document.noteGenerationCount || 0;
+        if (count >= PRO_REGEN_LIMIT) {
+          return {
+            canGenerate: false,
+            message: `Regeneration limit reached (${PRO_REGEN_LIMIT}) for your trial. Upgrade for more.`,
+            limitReached: true
+          };
+        }
+      }
+      return { canGenerate: true };
+    }
+  }
+
+  // 4. Fallback for expired users
   return {
     canGenerate: false,
-    message: "Your access has expired or you are on a free plan. Please upgrade or invite friends to continue.",
+    message: "Your access has expired. Please upgrade or invite friends to continue.",
     limitReached: true
   };
 };
