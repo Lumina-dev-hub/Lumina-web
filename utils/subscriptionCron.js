@@ -1,4 +1,5 @@
 const cron = require('node-cron');
+const axios = require('axios');
 const User = require('../models/User');
 const Classroom = require('../models/Classroom');
 const { sendPushNotification } = require('../services/notificationService');
@@ -11,10 +12,11 @@ const parseTime = (timeStr, referenceDate) => {
   return d;
 };
 
-// Helper: get today's 3-letter day abbreviation matching the schema
-const getTodayDayCode = () => {
+// Helper: get today's 3-letter day abbreviation matching the schema in Lagos timezone
+const getTodayDayCode = (referenceDate) => {
   const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-  return days[new Date().getDay()];
+  const targetDate = referenceDate || new Date(new Date().toLocaleString('en-US', { timeZone: 'Africa/Lagos' }));
+  return days[targetDate.getDay()];
 };
 
 const initSubscriptionCron = () => {
@@ -120,7 +122,7 @@ const initSubscriptionCron = () => {
     try {
       // Get current time in Nigerian timezone (Africa/Lagos)
       const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Africa/Lagos' }));
-      const todayCode = getTodayDayCode();
+      const todayCode = getTodayDayCode(now);
 
       // Fetch all classrooms that have a period today
       const classrooms = await Classroom.find({
@@ -143,6 +145,7 @@ const initSubscriptionCron = () => {
           const diffMins = Math.round(diffMs / 60000);
 
           if (diffMins === 15) {
+            console.log(`[Cron] Sending 15m reminder for ${period.subject} to ${teacher._id}`);
             await sendPushNotification(
               token,
               '🔔 Class in 15 Minutes',
@@ -150,6 +153,7 @@ const initSubscriptionCron = () => {
               { type: 'class_reminder', classroomId: classroom._id, minutesBefore: 15 }
             );
           } else if (diffMins === 5) {
+            console.log(`[Cron] Sending 5m reminder for ${period.subject} to ${teacher._id}`);
             await sendPushNotification(
               token,
               '⚡ Class Starting Soon!',
@@ -164,6 +168,23 @@ const initSubscriptionCron = () => {
     }
   }, { scheduled: true, timezone: 'Africa/Lagos' });
 
+
+  // ─────────────────────────────────────────────
+  // 4. Keep-Alive Ping (prevents Render from sleeping)
+  //    Runs every 10 minutes
+  // ─────────────────────────────────────────────
+  cron.schedule('*/10 * * * *', async () => {
+    try {
+      // If a backend URL is provided in env, use it, otherwise fallback to localhost
+      const url = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 5000}`;
+      console.log(`[Cron] Pinging self at ${url}/api/health to keep alive...`);
+      await axios.get(`${url}/api/health`);
+    } catch (error) {
+      console.error('[Cron] Keep-alive ping failed:', error.message);
+    }
+  });
+
 };
 
 module.exports = initSubscriptionCron;
+
