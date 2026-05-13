@@ -39,6 +39,7 @@ app.use('/api/plans', require('./routes/lessonPlanRoutes'));
 app.use('/api/assessments', require('./routes/assessmentRoutes'));
 app.use('/api/payments', require('./routes/paymentRoutes'));
 app.use('/api/referrals', require('./routes/referralRoutes'));
+app.use('/api/admin', require('./routes/adminRoutes'));
 
 // Error Handler
 app.use((err, req, res, next) => {
