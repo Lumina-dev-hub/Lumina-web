@@ -184,10 +184,28 @@ exports.updateProfile = async (req, res) => {
     if (user) {
       // Update fields if provided
       if (req.body.fullName) user.fullName = req.body.fullName;
-      if (req.body.personal) user.personal = { ...user.personal, ...req.body.personal };
-      if (req.body.professional) user.professional = { ...user.professional, ...req.body.professional };
-      if (req.body.classroom) user.classroom = { ...user.classroom, ...req.body.classroom };
-      if (req.body.settings) user.settings = { ...user.settings, ...req.body.settings };
+
+      // Use direct assignment for nested objects to avoid Mongoose validation issues with spread operator
+      if (req.body.personal) {
+        Object.keys(req.body.personal).forEach(key => {
+          user.personal[key] = req.body.personal[key];
+        });
+      }
+      if (req.body.professional) {
+        Object.keys(req.body.professional).forEach(key => {
+          user.professional[key] = req.body.professional[key];
+        });
+      }
+      if (req.body.classroom) {
+        Object.keys(req.body.classroom).forEach(key => {
+          user.classroom[key] = req.body.classroom[key];
+        });
+      }
+      if (req.body.settings) {
+        Object.keys(req.body.settings).forEach(key => {
+          user.settings[key] = req.body.settings[key];
+        });
+      }
 
       const updatedUser = await user.save();
       res.json({ success: true, user: updatedUser });
@@ -208,9 +226,22 @@ exports.completeOnboarding = async (req, res) => {
 
     if (user) {
       user.isOnboarded = true;
-      if (req.body.personal) user.personal = { ...user.personal, ...req.body.personal };
-      if (req.body.professional) user.professional = { ...user.professional, ...req.body.professional };
-      if (req.body.classroom) user.classroom = { ...user.classroom, ...req.body.classroom };
+      
+      if (req.body.personal) {
+        Object.keys(req.body.personal).forEach(key => {
+          user.personal[key] = req.body.personal[key];
+        });
+      }
+      if (req.body.professional) {
+        Object.keys(req.body.professional).forEach(key => {
+          user.professional[key] = req.body.professional[key];
+        });
+      }
+      if (req.body.classroom) {
+        Object.keys(req.body.classroom).forEach(key => {
+          user.classroom[key] = req.body.classroom[key];
+        });
+      }
 
       const updatedUser = await user.save();
       await referralService.trackStep(user._id, 'onboarding');
