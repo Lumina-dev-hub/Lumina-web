@@ -61,7 +61,7 @@ const executePrompt = async (model, prompt) => {
           },
         ],
         response_format: { type: "json_object" },
-        max_tokens: 2000,
+        max_tokens: 1000,
       },
       {
         headers: {
