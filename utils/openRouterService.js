@@ -93,7 +93,7 @@ const executePrompt = async (model, prompt) => {
 // AI Models Configuration
 const MODELS = {
   // DeepSeek / Gemini Flash - Excellent for structured, long-form content generation
-  LESSON_PLAN: "openai/gpt-4o",
+  LESSON_PLAN: "deepseek/deepseek-v4-flash",
 
   // GPT / Claude - Excellent for natural, student-friendly writing and formatting
   LESSON_NOTE: "anthropic/claude-3-haiku",
