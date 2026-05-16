@@ -99,10 +99,10 @@ const MODELS = {
   LESSON_NOTE: "anthropic/claude-3-haiku",
 
   // Mid-level model - Strong logical reasoning for generating rigorous, varied questions
-  ASSESSMENT: "openai/gpt-4o",
+  ASSESSMENT: "anthropic/claude-3-haiku",
 
   // Cheap fast model - Perfect for quick refinements and maintaining JSON structure
-  REGENERATION: "openai/gpt-4o",
+  REGENERATION: "anthropic/claude-3-haiku",
 };
 exports.generateLessonPlanWithAI = async (params, preferences, lang) => {
   const prompt = `
