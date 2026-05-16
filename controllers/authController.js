@@ -4,6 +4,12 @@ const DeviceLog = require('../models/DeviceLog');
 const generateToken = require('../utils/generateToken');
 const referralService = require('../services/referralService');
 const subscriptionService = require('../services/subscriptionService');
+const { sendOTPEmail } = require('../utils/emailService');
+
+// ─── Helper ────────────────────────────────────────────────────────────────────
+/** Generates a cryptographically random 6-digit OTP string */
+const generateOTP = () =>
+  Math.floor(100000 + Math.random() * 900000).toString();
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -26,8 +32,8 @@ exports.register = async (req, res) => {
       }
     }
 
-    // Generate simulated OTP (Fixed to 123456 for testing)
-    const otp = "123456";
+    // Generate a real 6-digit OTP
+    const otp = generateOTP();
     const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
 
     const user = await User.create({
@@ -66,14 +72,14 @@ exports.register = async (req, res) => {
     // Generate referral code for the new user
     await referralService.generateReferralCode(user);
 
-    if (user) {
-      res.status(201).json({
-        success: true,
-        message: 'OTP sent to email (simulated)',
-        email: user.email,
-        debug_otp: otp 
-      });
-    }
+    // Send OTP via EmailJS
+    await sendOTPEmail(user.email, user.fullName, otp);
+
+    res.status(201).json({
+      success: true,
+      message: 'OTP sent to your email address',
+      email: user.email,
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -97,6 +103,7 @@ exports.verifyOTP = async (req, res) => {
     }
 
     user.isVerified = true;
+    user.onboardingStep = 'profile-identity';
     user.otp = undefined;
     user.otpExpires = undefined;
 
@@ -117,8 +124,46 @@ exports.verifyOTP = async (req, res) => {
         email: user.email,
         isVerified: user.isVerified,
         isOnboarded: user.isOnboarded,
+        onboardingStep: user.onboardingStep,
         settings: user.settings
       }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Resend OTP
+// @route   POST /api/auth/resend-otp
+// @access  Public
+exports.resendOTP = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({ success: false, message: 'Email is already verified' });
+    }
+
+    // Generate a fresh OTP
+    const otp = generateOTP();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+
+    user.otp = otp;
+    user.otpExpires = otpExpires;
+    await user.save();
+
+    // Send the new OTP via EmailJS
+    await sendOTPEmail(user.email, user.fullName, otp);
+
+    res.status(200).json({
+      success: true,
+      message: 'A new OTP has been sent to your email address',
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -147,6 +192,7 @@ exports.login = async (req, res) => {
           personal: user.personal,
           professional: user.professional,
           classroom: user.classroom,
+          onboardingStep: user.onboardingStep,
           settings: user.settings
         }
       });
@@ -226,6 +272,7 @@ exports.completeOnboarding = async (req, res) => {
 
     if (user) {
       user.isOnboarded = true;
+      user.onboardingStep = 'completed';
       
       if (req.body.personal) {
         Object.keys(req.body.personal).forEach(key => {
@@ -249,6 +296,120 @@ exports.completeOnboarding = async (req, res) => {
     } else {
       res.status(404).json({ success: false, message: 'User not found' });
     }
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Update Onboarding Step
+// @route   PUT /api/auth/onboarding-step
+// @access  Private
+exports.updateOnboardingStep = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+
+    if (user) {
+      if (req.body.onboardingStep) {
+        user.onboardingStep = req.body.onboardingStep;
+      }
+      
+      if (req.body.personal) {
+        Object.keys(req.body.personal).forEach(key => {
+          user.personal[key] = req.body.personal[key];
+        });
+      }
+      if (req.body.professional) {
+        Object.keys(req.body.professional).forEach(key => {
+          user.professional[key] = req.body.professional[key];
+        });
+      }
+      if (req.body.classroom) {
+        Object.keys(req.body.classroom).forEach(key => {
+          user.classroom[key] = req.body.classroom[key];
+        });
+      }
+
+      const updatedUser = await user.save();
+      res.json({ success: true, user: updatedUser });
+    } else {
+      res.status(404).json({ success: false, message: 'User not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Forgot Password — send OTP to email
+// @route   POST /api/auth/forgot-password
+// @access  Public
+exports.forgotPassword = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      // Generic message to prevent user enumeration
+      return res.status(200).json({
+        success: true,
+        message: 'If an account with that email exists, an OTP has been sent.',
+      });
+    }
+
+    const otp = generateOTP();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+
+    user.otp = otp;
+    user.otpExpires = otpExpires;
+    await user.save();
+
+    await sendOTPEmail(user.email, user.fullName, otp);
+
+    res.status(200).json({
+      success: true,
+      message: 'OTP sent to your email address',
+      email: user.email,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Reset Password — verify OTP then update password
+// @route   POST /api/auth/reset-password
+// @access  Public
+exports.resetPassword = async (req, res) => {
+  const { email, otp, newPassword } = req.body;
+
+  try {
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Email, OTP, and new password are required.' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (user.otp !== otp || user.otpExpires < Date.now()) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
+    }
+
+    // Clear OTP fields and set new password (hashed by pre-save hook)
+    user.otp = undefined;
+    user.otpExpires = undefined;
+    user.password = newPassword;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Password reset successfully. You can now log in.',
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

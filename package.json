@@ -11,6 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@emailjs/nodejs": "^5.0.2",
     "@google/generative-ai": "^0.24.1",
     "@openrouter/sdk": "^0.12.26",
     "axios": "^1.16.0",

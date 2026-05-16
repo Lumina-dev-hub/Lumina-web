@@ -26,6 +26,11 @@ const UserSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    onboardingStep: {
+      type: String,
+      enum: ['otp', 'profile-identity', 'classroom-preferences', 'completed'],
+      default: 'otp',
+    },
     otp: String,
     otpExpires: Date,
     isOnboarded: {
