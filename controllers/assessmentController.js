@@ -214,15 +214,36 @@ exports.deleteAssessment = async (req, res) => {
 // @route   GET /api/assessments/topics
 exports.getAvailableTopics = async (req, res) => {
   try {
-    const { classroomId, subjectName } = req.query;
+    const { classroomId, subjectName, term } = req.query;
     if (!classroomId || !subjectName) {
       return res.status(400).json({ success: false, message: 'Classroom and Subject are required' });
     }
 
-    const plans = await LessonPlan.find({ 
-      classroom: classroomId, 
-      subjectName: subjectName 
-    }).select('topic');
+    const classroom = await Classroom.findById(classroomId);
+    if (!classroom) {
+      return res.status(404).json({ success: false, message: 'Classroom not found' });
+    }
+
+    let filterTerm = term;
+    if (term && term !== 'all') {
+      if (term.toLowerCase().includes('term')) {
+         filterTerm = term;
+      } else {
+         filterTerm = term === '1' ? '1st Term' : term === '2' ? '2nd Term' : term === '3' ? '3rd Term' : term;
+      }
+    }
+
+    const query = {
+      classroom: classroomId,
+      subjectName: subjectName,
+      session: classroom.academicYear
+    };
+
+    if (filterTerm && filterTerm !== 'all') {
+      query.term = filterTerm;
+    }
+
+    const plans = await LessonPlan.find(query).select('topic');
 
     const topics = [...new Set(plans.map(p => p.topic))];
     res.status(200).json({ success: true, data: topics });

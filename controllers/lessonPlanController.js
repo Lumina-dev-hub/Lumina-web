@@ -59,9 +59,9 @@ exports.generateLessonPlan = async (req, res) => {
         includeAssessment,
       };
       const preferences = {
-        studentLevel: studentType || prefs.studentLevel,
-        teachingPhilosophy: prefs.teachingPhilosophy[0],
-        planStyle: prefs.planStyle[0],
+        studentLevel: studentType || prefs.studentLevel || "Mixed",
+        teachingPhilosophy: philosophy || prefs.teachingPhilosophy?.[0] || "Constructivism",
+        planStyle: planStyle || prefs.planStyle?.[0] || "Detailed",
       };
 
       generatedPlan = await aiService.generateLessonPlanWithAI(
@@ -117,8 +117,8 @@ exports.generateLessonPlan = async (req, res) => {
       topic: isEmpty
         ? topic || "New Topic"
         : generatedPlan.topic || topic || "New Topic",
-      philosophy: philosophy || prefs.teachingPhilosophy[0] || "Constructivism",
-      planStyle: planStyle || prefs.planStyle[0] || "Detailed",
+      philosophy: philosophy || prefs.teachingPhilosophy?.[0] || "Constructivism",
+      planStyle: planStyle || prefs.planStyle?.[0] || "Detailed",
       studentType: studentType || prefs.studentLevel || "Mixed",
       duration: isEmpty ? "40 minutes" : generatedPlan.duration || "40 minutes",
       classActivity: isEmpty ? "" : generatedPlan.classActivity || "",
