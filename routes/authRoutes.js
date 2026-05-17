@@ -15,6 +15,7 @@ const {
   testNotification,
   forgotPassword,
   resetPassword,
+  googleAuth,
 } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
 const upload = require('../config/cloudinary');
@@ -25,6 +26,7 @@ router.post('/resend-otp', resendOTP);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
 router.post('/login', login);
+router.post('/google', googleAuth);
 router.get('/me', protect, getMe);
 router.put('/profile', protect, updateProfile);
 router.put('/onboarding', protect, completeOnboarding);

@@ -510,4 +510,105 @@ exports.testNotification = async (req, res) => {
   }
 };
 
+// @desc    Authenticate/Register user via Google OAuth
+// @route   POST /api/auth/google
+// @access  Public
+exports.googleAuth = async (req, res) => {
+  const { OAuth2Client } = require('google-auth-library');
+  const { idToken } = req.body;
+
+  if (!idToken) {
+    return res.status(400).json({ success: false, message: 'Google ID token is required' });
+  }
+
+  try {
+    const webClientId = process.env.GOOGLE_CLIENT_ID || '668245289397-m2g7482o1k9q84t5q8n9p5m2463e26m8.apps.googleusercontent.com';
+    const androidClientId = process.env.GOOGLE_ANDROID_CLIENT_ID || '668245289397-m2g7482o1k9q84t5q8n9p5m2463e26m8.apps.googleusercontent.com';
+    const iosClientId = process.env.GOOGLE_IOS_CLIENT_ID;
+
+    const client = new OAuth2Client();
+    
+    // Verify the Google ID Token
+    const ticket = await client.verifyIdToken({
+      idToken,
+      audience: [webClientId, androidClientId, iosClientId].filter(Boolean),
+    });
+
+    const payload = ticket.getPayload();
+    const { sub: googleId, email, name: fullName, picture } = payload;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Google account must have an email address' });
+    }
+
+    // 1. Search for existing user by googleId
+    let user = await User.findOne({ googleId });
+
+    // 2. If not found by googleId, search by email to link accounts
+    if (!user) {
+      user = await User.findOne({ email });
+
+      if (user) {
+        // Link googleId and update provider to google
+        user.googleId = googleId;
+        user.authProvider = 'google';
+        user.isVerified = true; // Google accounts are pre-verified
+        if (!user.personal) {
+          user.personal = {};
+        }
+        if (!user.personal.profilePhoto && picture) {
+          user.personal.profilePhoto = picture;
+        }
+        await user.save();
+      }
+    }
+
+    // 3. If still not found, create a new user
+    if (!user) {
+      user = await User.create({
+        fullName,
+        email,
+        googleId,
+        authProvider: 'google',
+        isVerified: true,
+        onboardingStep: 'profile-identity',
+        personal: {
+          profilePhoto: picture || '',
+        },
+      });
+
+      // Grant 5-day trial since they are a new user
+      await subscriptionService.grantTrial(user);
+
+      // Generate a referral code
+      await referralService.generateReferralCode(user);
+
+      // Track referral verification step
+      await referralService.trackStep(user._id, 'verification');
+    }
+
+    // Generate JWT token
+    const token = generateToken(user._id);
+
+    res.status(200).json({
+      success: true,
+      token,
+      user: {
+        id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        isVerified: user.isVerified,
+        isOnboarded: user.isOnboarded,
+        personal: user.personal,
+        professional: user.professional,
+        classroom: user.classroom,
+        onboardingStep: user.onboardingStep,
+        settings: user.settings,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 
