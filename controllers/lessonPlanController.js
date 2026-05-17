@@ -366,7 +366,9 @@ exports.getMyLessonPlans = async (req, res) => {
     if (timeline) {
       const now = new Date();
       if (timeline === "this_week") {
-        const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+        const startOfWeek = new Date();
+        startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
         query.createdAt = { $gte: startOfWeek };
       } else if (timeline === "this_month") {
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
