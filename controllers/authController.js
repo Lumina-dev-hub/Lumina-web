@@ -21,6 +21,42 @@ exports.register = async (req, res) => {
     const userExists = await User.findOne({ email });
 
     if (userExists) {
+      // Scenario A: User registered but email is not verified yet
+      if (!userExists.isVerified) {
+        if (password) {
+          userExists.password = password;
+        }
+        if (fullName) {
+          userExists.fullName = fullName;
+        }
+        // Generate a new 6-digit OTP
+        const otp = generateOTP();
+        const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+        
+        userExists.otp = otp;
+        userExists.otpExpires = otpExpires;
+        await userExists.save();
+        
+        // Send OTP via email
+        await sendOTPEmail(userExists.email, userExists.fullName, otp);
+        
+        return res.status(201).json({
+          success: true,
+          message: 'Account was not verified. A new OTP has been sent to your email.',
+          email: userExists.email,
+        });
+      }
+      
+      // Scenario B: User is verified but has not completed onboarding
+      if (!userExists.isOnboarded) {
+        return res.status(400).json({
+          success: false,
+          code: 'ONBOARDING_INCOMPLETE',
+          message: 'An account already exists with this email but onboarding is incomplete. Please log in to complete your setup.',
+          email: userExists.email
+        });
+      }
+
       return res.status(400).json({ success: false, message: 'User already exists' });
     }
 
