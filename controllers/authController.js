@@ -571,7 +571,10 @@ exports.googleAuth = async (req, res) => {
     });
 
     const payload = ticket.getPayload();
-    const { sub: googleId, email, name: fullName, picture } = payload;
+    const { sub: googleId, email, name: nameFromToken, picture } = payload;
+
+    // Fall back to the name sent from the client (web popup may not include name in token)
+    const fullName = nameFromToken || req.body.fullName || email?.split('@')[0];
 
     if (!email) {
       return res.status(400).json({ success: false, message: 'Google account must have an email address' });
@@ -609,7 +612,7 @@ exports.googleAuth = async (req, res) => {
         isVerified: true,
         onboardingStep: 'profile-identity',
         personal: {
-          profilePhoto: picture || '',
+          profilePhoto: picture || req.body.photoURL || '',
         },
       });
 
