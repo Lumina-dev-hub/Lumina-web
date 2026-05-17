@@ -120,6 +120,10 @@ const UserSchema = new mongoose.Schema(
         type: [String], // e.g., ["tier_3", "tier_5"]
         default: [],
       },
+      academicSession: {
+        type: String,
+        default: "2024/2025",
+      },
     },
     role: {
       type: String,

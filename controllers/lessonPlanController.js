@@ -420,3 +420,17 @@ exports.getMyLessonPlans = async (req, res) => {
     res.status(400).json({ success: false, message: error.message });
   }
 };
+
+// @desc    Delete lesson plan
+// @route   DELETE /api/plans/:id
+exports.deleteLessonPlan = async (req, res) => {
+  try {
+    const plan = await LessonPlan.findByIdAndDelete(req.params.id);
+    if (!plan) {
+      return res.status(404).json({ success: false, message: 'Lesson plan not found' });
+    }
+    res.status(200).json({ success: true, message: 'Lesson plan deleted successfully' });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
