@@ -551,7 +551,7 @@ exports.testNotification = async (req, res) => {
 // @access  Public
 exports.googleAuth = async (req, res) => {
   const { OAuth2Client } = require('google-auth-library');
-  const { idToken } = req.body;
+  const { idToken, deviceId } = req.body;
 
   if (!idToken) {
     return res.status(400).json({ success: false, message: 'Google ID token is required' });
@@ -604,6 +604,14 @@ exports.googleAuth = async (req, res) => {
 
     // 3. If still not found, create a new user
     if (!user) {
+      let hasUsedTrial = false;
+      if (deviceId) {
+        const deviceExists = await DeviceLog.findOne({ deviceId });
+        if (deviceExists) {
+          hasUsedTrial = true;
+        }
+      }
+
       user = await User.create({
         fullName,
         email,
@@ -614,7 +622,14 @@ exports.googleAuth = async (req, res) => {
         personal: {
           profilePhoto: picture || req.body.photoURL || '',
         },
+        settings: {
+          hasUsedTrial,
+        }
       });
+
+      if (deviceId) {
+        await DeviceLog.create({ deviceId, userId: user._id });
+      }
 
       // Grant 5-day trial since they are a new user
       await subscriptionService.grantTrial(user);
