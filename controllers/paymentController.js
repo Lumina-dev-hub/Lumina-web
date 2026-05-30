@@ -67,6 +67,7 @@ exports.initializePayment = async (req, res) => {
         authorization_url,
         access_code,
         reference: txRef,
+        publicKey: process.env.PAYSTACK_PUBLIC_KEY,
       },
     });
   } catch (error) {
